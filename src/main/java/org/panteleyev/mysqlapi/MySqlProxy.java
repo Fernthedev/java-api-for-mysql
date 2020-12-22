@@ -326,6 +326,10 @@ public class MySqlProxy {
     }
 
     public String buildIndex(Table table, Field field) {
+        return buildIndex(table.value(), field);
+    }
+
+    public String buildIndex(String table, Field field) {
         Column column = field.getAnnotation(Column.class);
         Index index = field.getAnnotation(Index.class);
 
@@ -337,7 +341,7 @@ public class MySqlProxy {
         b.append("INDEX ")
             .append(index.value())
             .append(" ON ")
-            .append(table.value())
+            .append(table)
             .append(" (")
             .append(column.value())
             .append(")");
