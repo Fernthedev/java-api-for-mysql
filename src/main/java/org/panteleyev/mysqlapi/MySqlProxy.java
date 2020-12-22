@@ -48,7 +48,7 @@ import static org.panteleyev.mysqlapi.DataTypes.TYPE_STRING;
 import static org.panteleyev.mysqlapi.DataTypes.TYPE_UUID;
 
 public class MySqlProxy {
-    private static final Map<String, BiFunction<ResultSet, String, ?>> RESULT_SET_READERS = new HashMap<>();
+    private static final Map<String, BiFunction<Object, Class<?>, ?>> RESULT_SET_READERS = new HashMap<>();
 
     static {
         RESULT_SET_READERS.put(TYPE_STRING, OBJECT_READER);
@@ -65,22 +65,28 @@ public class MySqlProxy {
         RESULT_SET_READERS.put(TYPE_UUID, UUID_STRING_READER);
     }
 
-    public Map<String, BiFunction<ResultSet, String, ?>> getReaderMap() {
+    public Map<String, BiFunction<Object, Class<?>, ?>> getReaderMap() {
         return RESULT_SET_READERS;
     }
 
     public Object getFieldValue(String fieldName, Class typeClass, ResultSet set) throws SQLException {
+        Object value = set.getObject(fieldName);
+
+        return getFieldValue(typeClass, value);
+
+    }
+
+    public Object getFieldValue(Class typeClass, Object value) {
         if (typeClass.isEnum()) {
-            Object value = set.getObject(fieldName);
             return value == null ? null : Enum.valueOf(typeClass, (String) value);
         }
 
-        BiFunction<ResultSet, String, ?> reader = getReaderMap().get(typeClass.getTypeName());
+        BiFunction<Object, Class<?>, ?> reader = getReaderMap().get(typeClass.getTypeName());
         if (reader == null) {
             throw new IllegalStateException(BAD_FIELD_TYPE + typeClass.getTypeName());
         }
 
-        return reader.apply(set, fieldName);
+        return reader.apply(value, typeClass);
     }
 
     public String buildForeignKey(Column column, ForeignKey key) {
@@ -319,7 +325,7 @@ public class MySqlProxy {
         }
     }
 
-    String buildIndex(Table table, Field field) {
+    public String buildIndex(Table table, Field field) {
         Column column = field.getAnnotation(Column.class);
         Index index = field.getAnnotation(Index.class);
 
